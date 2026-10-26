@@ -1,237 +1,130 @@
 import { useEffect, useState } from "react";
-import { Bar, Line, Doughnut } from "react-chartjs-2";
 import {
-  Chart as ChartJS,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  ArcElement,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend,
-} from "chart.js";
-import { DollarSign, Star, Truck, AlertTriangle, Download } from "lucide-react";
-import StatCard from "../../components/StatCard";
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
+  PieChart, Pie, Cell, ResponsiveContainer,
+} from "recharts";
 import { apiFetch } from "../../services/http";
-import { API_URL } from "../../services/auth";
+import { getUser } from "../../services/auth";
 
-ChartJS.register(
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  ArcElement,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend
-);
+const COP = new Intl.NumberFormat("es-CO", {
+  style: "currency", currency: "COP", maximumFractionDigits: 0,
+});
+const COLORES = ["#8B5CF6", "#EC4899", "#A78BFA", "#F472B6", "#C4B5FD", "#FBCFE8"];
 
+async function getResumen() {
+  const res = await apiFetch("/dashboard/resumen");
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(body?.detail || `Error ${res.status}`);
+  return body;
+}
 
-
-const PALETA = ["#7c3aed", "#ec4899", "#a78bfa", "#f9a8d4", "#c4b5fd", "#d1d5db"];
-
-const dinero = (n) => `$${Number(n ?? 0).toLocaleString("es-CO")}`;
-
-async function getJson(path) {
-  const res = await apiFetch(path);
-  if (!res.ok) throw new Error(`Error ${res.status} al consultar ${path}`);
-  return res.json();
+function Tarjeta({ titulo, valor, alerta = false }) {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm p-5">
+      <p className="text-sm text-slate-500">{titulo}</p>
+      <p className={`text-2xl font-bold mt-1 ${alerta ? "text-pink-600" : "text-slate-800"}`}>
+        {valor}
+      </p>
+    </div>
+  );
 }
 
 export default function Dashboard() {
+  const user = getUser();
   const [data, setData] = useState(null);
-  const [stats, setStats] = useState(null);
   const [error, setError] = useState("");
 
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
-
   useEffect(() => {
-    Promise.all([getJson("/dashboard"), getJson("/dashboard/stats")])
-      .then(([d, s]) => {
-        setData(d);
-        setStats(s);
-      })
-      .catch((err) => setError(err.message));
+    getResumen().then(setData).catch((e) => setError(e.message));
   }, []);
 
-  const filtrar = async () => {
-    if (!start || !end) return alert("Selecciona ambas fechas");
-    try {
-      setError("");
-      setData(await getJson(`/dashboard/filtrado?start=${start}&end=${end}`));
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  if (!data || !stats) {
-    return <p className="text-slate-500">{error || "Cargando dashboard..."}</p>;
+  if (error) {
+    return <p className="text-sm text-red-600 bg-red-50 rounded-xl p-3">{error}</p>;
+  }
+  if (!data) {
+    return <p className="text-slate-400">Cargando resumen...</p>;
   }
 
-  const ventasMes = data.sales_per_month ?? [];
-  const compras = data.purchases_by_provider ?? [];
-  const topProductos = (data.top_products ?? []).slice(0, 5);
+  const t = data.tarjetas;
+  const maxTop = Math.max(1, ...data.top_productos.map((p) => p.unidades));
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* ENCABEZADO + FILTROS */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
-          <p className="text-sm text-slate-500">Resumen general de tu inventario</p>
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs text-slate-500">
-            Fecha inicio
-            <input
-              type="date"
-              value={start}
-              onChange={(e) => setStart(e.target.value)}
-              className="block mt-1 bg-white rounded-xl shadow-sm px-3 py-2 text-sm text-slate-700 outline-none"
-            />
-          </label>
-
-          <label className="text-xs text-slate-500">
-            Fecha fin
-            <input
-              type="date"
-              value={end}
-              onChange={(e) => setEnd(e.target.value)}
-              className="block mt-1 bg-white rounded-xl shadow-sm px-3 py-2 text-sm text-slate-700 outline-none"
-            />
-          </label>
-
-          <button
-            onClick={filtrar}
-            className="bg-linear-to-r from-pink-500 to-violet-500 text-white rounded-xl px-5 py-2 text-sm font-medium shadow-sm"
-          >
-            Filtrar
-          </button>
-
-          <button
-            onClick={() => window.open(`${API_URL}/export/ventas`)}
-            className="flex items-center gap-2 bg-white text-violet-600 rounded-xl px-4 py-2 text-sm font-medium shadow-sm"
-          >
-            <Download size={16} />
-            Exportar ventas
-          </button>
-        </div>
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-800">Inicio</h1>
+        <p className="text-sm text-slate-500">Hola, {user?.username}. Este es el resumen de tu negocio.</p>
       </div>
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
-
-      {/* TARJETAS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard
-          title="Promedio diario"
-          value={dinero(stats.promedio_diario)}
-          note="Ventas por día"
-          icon={DollarSign}
-        />
-        <StatCard
-          title="Producto más rentable"
-          value={stats.producto_rentable?.name ?? "—"}
-          note="Mayor ganancia"
-          icon={Star}
-          tone="pink"
-        />
-        <StatCard
-          title="Proveedor top"
-          value={stats.proveedor_top?.name ?? "—"}
-          note="Mayor volumen de compras"
-          icon={Truck}
-        />
-        <StatCard
-          title="Stock bajo"
-          value={data.low_stock?.length ?? 0}
-          note="Productos por reponer"
-          icon={AlertTriangle}
-          tone="pink"
-        />
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <Tarjeta titulo="Productos activos" valor={t.productos} />
+        <Tarjeta titulo="Unidades en stock" valor={t.unidades.toLocaleString("es-CO")} />
+        <Tarjeta titulo="Valor del inventario (costo)" valor={COP.format(t.valor_inventario)} />
+        <Tarjeta titulo="Ventas del mes" valor={COP.format(t.ventas_mes)} />
+        <Tarjeta titulo="Compras del mes" valor={COP.format(t.compras_mes)} />
+        <Tarjeta titulo="Stock bajo o agotado" valor={t.stock_bajo} alerta={t.stock_bajo > 0} />
       </div>
 
-      {/* GRÁFICOS PRINCIPALES */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl shadow-sm p-5">
-          <h2 className="font-semibold text-slate-800 mb-3">Ventas por mes</h2>
-          <Bar
-            data={{
-              labels: ventasMes.map((s) => s.month),
-              datasets: [
-                {
-                  label: "Ventas",
-                  data: ventasMes.map((s) => s.total),
-                  backgroundColor: "#8b5cf6",
-                  borderRadius: 6,
-                },
-              ],
-            }}
-            options={{ plugins: { legend: { display: false } } }}
-          />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl shadow-sm p-5 lg:col-span-2">
+          <h2 className="font-semibold text-slate-800 mb-3">Ventas y compras (6 meses)</h2>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.mensual}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="mes" />
+                <YAxis tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                <Tooltip formatter={(v) => COP.format(v)} />
+                <Legend />
+                <Bar dataKey="ventas" name="Ventas" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="compras" name="Compras" fill="#EC4899" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-5">
-          <h2 className="font-semibold text-slate-800 mb-3">Productos más vendidos</h2>
+          <h2 className="font-semibold text-slate-800 mb-3">Stock por categoría</h2>
+          {data.por_categoria.length === 0 ? (
+            <p className="text-sm text-slate-400">Sin stock registrado</p>
+          ) : (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={data.por_categoria} dataKey="unidades" nameKey="categoria"
+                    innerRadius={50} outerRadius={85} paddingAngle={2}>
+                    {data.por_categoria.map((_, i) => (
+                      <Cell key={i} fill={COLORES[i % COLORES.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v) => `${v} unidades`} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm p-5">
+        <h2 className="font-semibold text-slate-800 mb-3">Productos con más salidas (30 días)</h2>
+        {data.top_productos.length === 0 ? (
+          <p className="text-sm text-slate-400">Aún no hay ventas en este periodo</p>
+        ) : (
           <ul className="flex flex-col gap-3">
-            {topProductos.length === 0 && (
-              <li className="text-sm text-slate-400">Sin datos</li>
-            )}
-            {topProductos.map((p, i) => (
-              <li key={p.name} className="flex items-center gap-3 text-sm">
-                <span className="w-7 h-7 shrink-0 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center font-semibold">
-                  {i + 1}
-                </span>
-                <span className="flex-1 text-slate-700">{p.name}</span>
-                <span className="px-2 py-1 rounded-lg bg-violet-100 text-violet-600 font-semibold">
-                  {p.quantity}
-                </span>
+            {data.top_productos.map((p) => (
+              <li key={p.producto}>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-700">{p.producto}</span>
+                  <span className="text-slate-500">{p.unidades} uds</span>
+                </div>
+                <div className="h-2 bg-violet-50 rounded-full mt-1">
+                  <div className="h-2 rounded-full bg-linear-to-r from-pink-400 to-violet-500"
+                    style={{ width: `${(p.unidades / maxTop) * 100}%` }} />
+                </div>
               </li>
             ))}
           </ul>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-sm p-5">
-          <h2 className="font-semibold text-slate-800 mb-3">Compras por proveedor</h2>
-          <Doughnut
-            data={{
-              labels: compras.map((p) => p.provider),
-              datasets: [
-                {
-                  data: compras.map((p) => p.total),
-                  backgroundColor: PALETA,
-                  borderWidth: 0,
-                },
-              ],
-            }}
-            options={{ cutout: "55%", plugins: { legend: { position: "bottom" } } }}
-          />
-        </div>
-      </div>
-
-      {/* TENDENCIA */}
-      <div className="bg-white rounded-2xl shadow-sm p-5">
-        <h2 className="font-semibold text-slate-800 mb-3">Tendencia de ventas</h2>
-        <Line
-          data={{
-            labels: ventasMes.map((s) => s.month),
-            datasets: [
-              {
-                label: "Tendencia",
-                data: ventasMes.map((s) => s.total),
-                borderColor: "#ec4899",
-                backgroundColor: "rgba(236,72,153,0.15)",
-                fill: true,
-                tension: 0.4,
-              },
-            ],
-          }}
-          options={{ plugins: { legend: { display: false } } }}
-        />
+        )}
       </div>
     </div>
   );
