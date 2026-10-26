@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+@theme {
+  --color-morado: #D5B8FF;
+  --color-rosado: #FFC7E3;
+}
+
+body {
+  background: #f8fafc;
+}
