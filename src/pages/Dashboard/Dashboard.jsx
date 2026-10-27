@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { apiFetch } from "../../services/http";
 import { getUser } from "../../services/auth";
+import { puedeVer } from "../../config/permisos.js";
 
 const COP = new Intl.NumberFormat("es-CO", {
   style: "currency", currency: "COP", maximumFractionDigits: 0,
@@ -19,8 +20,8 @@ const PERIODOS = [
   { value: 12, label: "Último año" },
 ];
 
-// Ajusta las rutas (to) a las que tengas en main.jsx.
-// roles: quién ve el botón. Si omites roles, lo ven todos.
+// Los botones se muestran solo si el rol del usuario tiene permiso
+// sobre esa ruta (config/permisos.js).
 const ACCIONES = [
   { label: "Nuevo producto", to: "/products" },
   { label: "Registrar entrada", to: "/purchases" },
@@ -74,7 +75,7 @@ export default function Dashboard() {
   const t = data.tarjetas;
   const maxTop = Math.max(1, ...data.top_productos.map((p) => p.unidades));
   const etiquetaPeriodo = meses === 1 ? "este mes" : `${meses} meses`;
- const accionesVisibles = ACCIONES.filter((a) => puedeVer(user?.role, a.to));
+  const accionesVisibles = ACCIONES.filter((a) => puedeVer(user?.role, a.to));
 
   return (
     <div className="flex flex-col gap-4">
