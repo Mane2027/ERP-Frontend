@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
   PieChart, Pie, Cell, ResponsiveContainer,
@@ -11,8 +12,24 @@ const COP = new Intl.NumberFormat("es-CO", {
 });
 const COLORES = ["#8B5CF6", "#EC4899", "#A78BFA", "#F472B6", "#C4B5FD", "#FBCFE8"];
 
-async function getResumen() {
-  const res = await apiFetch("/dashboard/resumen");
+const PERIODOS = [
+  { value: 1, label: "Este mes" },
+  { value: 3, label: "Últimos 3 meses" },
+  { value: 6, label: "Últimos 6 meses" },
+  { value: 12, label: "Último año" },
+];
+
+// Ajusta las rutas (to) a las que tengas en main.jsx.
+// roles: quién ve el botón. Si omites roles, lo ven todos.
+const ACCIONES = [
+  { label: "Nuevo producto", to: "/products" },
+  { label: "Registrar entrada", to: "/purchases" },
+  { label: "Registrar salida", to: "/sales" },
+  { label: "Ver reportes", to: "/reports" },
+];
+
+async function getResumen(meses) {
+  const res = await apiFetch(`/dashboard/resumen?meses=${meses}`);
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(body?.detail || `Error ${res.status}`);
   return body;
@@ -31,14 +48,23 @@ function Tarjeta({ titulo, valor, alerta = false }) {
 
 export default function Dashboard() {
   const user = getUser();
+  const [meses, setMeses] = useState(6);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    getResumen().then(setData).catch((e) => setError(e.message));
-  }, []);
+    let cancelado = false;
+    setCargando(true);
+    setError("");
+    getResumen(meses)
+      .then((d) => { if (!cancelado) setData(d); })
+      .catch((e) => { if (!cancelado) setError(e.message); })
+      .finally(() => { if (!cancelado) setCargando(false); });
+    return () => { cancelado = true; };
+  }, [meses]);
 
-  if (error) {
+  if (error && !data) {
     return <p className="text-sm text-red-600 bg-red-50 rounded-xl p-3">{error}</p>;
   }
   if (!data) {
@@ -47,13 +73,50 @@ export default function Dashboard() {
 
   const t = data.tarjetas;
   const maxTop = Math.max(1, ...data.top_productos.map((p) => p.unidades));
+  const etiquetaPeriodo = meses === 1 ? "este mes" : `${meses} meses`;
+ const accionesVisibles = ACCIONES.filter((a) => puedeVer(user?.role, a.to));
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Inicio</h1>
-        <p className="text-sm text-slate-500">Hola, {user?.username}. Este es el resumen de tu negocio.</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Inicio</h1>
+          <p className="text-sm text-slate-500">
+            Hola, {user?.username}. Este es el resumen de tu negocio.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {cargando && <span className="text-xs text-slate-400">Actualizando...</span>}
+          <select
+            value={meses}
+            onChange={(e) => setMeses(Number(e.target.value))}
+            aria-label="Periodo del resumen"
+            className="bg-white rounded-xl border border-violet-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300"
+          >
+            {PERIODOS.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
+
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 rounded-xl p-3">{error}</p>
+      )}
+
+      {accionesVisibles.length > 0 && (
+        <div className="flex flex-wrap gap-3">
+          {accionesVisibles.map((a) => (
+            <Link
+              key={a.label}
+              to={a.to}
+              className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-linear-to-r from-pink-400 to-violet-500 shadow-sm hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-violet-300"
+            >
+              {a.label}
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <Tarjeta titulo="Productos activos" valor={t.productos} />
@@ -66,7 +129,9 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl shadow-sm p-5 lg:col-span-2">
-          <h2 className="font-semibold text-slate-800 mb-3">Ventas y compras (6 meses)</h2>
+          <h2 className="font-semibold text-slate-800 mb-3">
+            Ventas y compras ({etiquetaPeriodo})
+          </h2>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.mensual}>
@@ -106,7 +171,9 @@ export default function Dashboard() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-5">
-        <h2 className="font-semibold text-slate-800 mb-3">Productos con más salidas (30 días)</h2>
+        <h2 className="font-semibold text-slate-800 mb-3">
+          Productos con más salidas ({etiquetaPeriodo})
+        </h2>
         {data.top_productos.length === 0 ? (
           <p className="text-sm text-slate-400">Aún no hay ventas en este periodo</p>
         ) : (
