@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Modal from "../../components/Modal";
 import SaleForm from "./SaleForm";
 import { getSales, createSale } from "../../services/sales";
+import { getUser } from "../../services/auth";
 
 const formatearFecha = (iso) =>
   iso ? new Date(iso + (iso.endsWith("Z") ? "" : "Z")).toLocaleString() : "";
@@ -10,6 +11,10 @@ export default function SalesList() {
   const [sales, setSales] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState("");
+
+  // Inventario solo consulta las ventas; registrar es de admin y vendedor
+  const user = getUser();
+  const puedeVender = ["admin", "vendedor"].includes(user?.role);
 
   const loadSales = async () => {
     try {
@@ -48,12 +53,14 @@ export default function SalesList() {
     <div className="p-6 bg-beige min-h-screen">
       <h1 className="text-3xl font-bold text-morado mb-4">Ventas</h1>
 
-      <button
-        onClick={() => setModalOpen(true)}
-        className="bg-rosa p-2 rounded mb-4"
-      >
-        + Registrar Venta
-      </button>
+      {puedeVender && (
+        <button
+          onClick={() => setModalOpen(true)}
+          className="bg-rosa p-2 rounded mb-4"
+        >
+          + Registrar Venta
+        </button>
+      )}
 
       {error && (
         <p className="whitespace-pre-line text-sm text-red-600 bg-red-50 rounded-xl p-3 mb-4">
@@ -93,7 +100,7 @@ export default function SalesList() {
         </tbody>
       </table>
 
-      {modalOpen && (
+      {modalOpen && puedeVender && (
         <Modal onClose={() => setModalOpen(false)}>
           <SaleForm onSubmit={handleCreate} />
         </Modal>
