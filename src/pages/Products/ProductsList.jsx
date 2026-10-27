@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Modal from "../../components/Modal";
 import ProductForm from "./ProductForm";
+import { getUser } from "../../services/auth";
 import {
   getProducts,
   createProduct,
@@ -28,6 +29,10 @@ export default function ProductsList() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [error, setError] = useState("");
+
+  // El vendedor solo consulta: crear, editar y eliminar son de admin e inventario
+  const user = getUser();
+  const puedeEditar = ["admin", "inventario"].includes(user?.role);
 
   const loadProducts = async () => {
     try {
@@ -88,12 +93,14 @@ export default function ProductsList() {
           <p className="text-sm text-slate-500">Gestiona tu catálogo</p>
         </div>
 
-        <button
-          onClick={() => setModalOpen(true)}
-          className="bg-linear-to-r from-pink-500 to-violet-500 text-white rounded-xl px-5 py-2 text-sm font-medium shadow-sm"
-        >
-          + Crear producto
-        </button>
+        {puedeEditar && (
+          <button
+            onClick={() => setModalOpen(true)}
+            className="bg-linear-to-r from-pink-500 to-violet-500 text-white rounded-xl px-5 py-2 text-sm font-medium shadow-sm"
+          >
+            + Crear producto
+          </button>
+        )}
       </div>
 
       {error && (
@@ -112,14 +119,17 @@ export default function ProductsList() {
               <th className="p-3">Categoría</th>
               <th className="p-3">Precio</th>
               <th className="p-3">Stock</th>
-              <th className="p-3">Acciones</th>
+              {puedeEditar && <th className="p-3">Acciones</th>}
             </tr>
           </thead>
 
           <tbody>
             {products.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-slate-400">
+                <td
+                  colSpan={puedeEditar ? 7 : 6}
+                  className="p-6 text-center text-slate-400"
+                >
                   No hay productos todavía
                 </td>
               </tr>
@@ -133,33 +143,35 @@ export default function ProductsList() {
                 <td className="p-3">{p.category}</td>
                 <td className="p-3">${p.price}</td>
                 <td className="p-3">{p.stock}</td>
-                <td className="p-3">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingProduct(p);
-                        setModalOpen(true);
-                      }}
-                      className="bg-violet-100 text-violet-700 px-3 py-1 rounded-lg"
-                    >
-                      Editar
-                    </button>
+                {puedeEditar && (
+                  <td className="p-3">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingProduct(p);
+                          setModalOpen(true);
+                        }}
+                        className="bg-violet-100 text-violet-700 px-3 py-1 rounded-lg"
+                      >
+                        Editar
+                      </button>
 
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      className="bg-pink-100 text-pink-700 px-3 py-1 rounded-lg"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </td>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="bg-pink-100 text-pink-700 px-3 py-1 rounded-lg"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {modalOpen && (
+      {modalOpen && puedeEditar && (
         <Modal onClose={cerrarModal}>
           <ProductForm
             initialData={editingProduct || {}}
@@ -170,4 +182,3 @@ export default function ProductsList() {
     </div>
   );
 }
-
