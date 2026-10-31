@@ -8,6 +8,12 @@ import { getUser } from "../../services/auth";
 const formatearFecha = (iso) =>
   iso ? new Date(iso + (iso.endsWith("Z") ? "" : "Z")).toLocaleString() : "";
 
+const ETIQUETAS_PAGO = {
+  efectivo: "Efectivo",
+  transferencia: "Transferencia",
+  nequi: "Nequi",
+  daviplata: "Daviplata",
+};
 export default function SalesList() {
   const [sales, setSales] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -97,6 +103,7 @@ export default function SalesList() {
               <th className="p-2">Fecha</th>
               <th className="p-2">Productos</th>
               <th className="p-2">Total</th>
+              <th className="p-2">Pago</th>
               <th className="p-2">Estado</th>
               <th className="p-2">Acciones</th>
             </tr>
@@ -105,7 +112,7 @@ export default function SalesList() {
           <tbody>
             {sales.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-slate-400">
+                  <td colSpan={7} className="p-6 text-center text-slate-400">
                   No hay ventas todavía
                 </td>
               </tr>
@@ -117,6 +124,10 @@ export default function SalesList() {
                 <tr key={s.id} className={`border-b ${anulada ? "text-slate-400" : ""}`}>
                   <td className="p-2">{s.invoice_number ?? "—"}</td>
                   <td className="p-2">{formatearFecha(s.date)}</td>
+                   <td className={`p-2 ${anulada ? "line-through" : ""}`}>
+                    ${Number(s.total).toFixed(2)}
+                  </td>
+                  <td className="p-2">{ETIQUETAS_PAGO[s.payment_method] ?? "—"}</td>
                   <td className="p-2">
                     {(s.items || []).map((item, i) => (
                       <div key={i}>
