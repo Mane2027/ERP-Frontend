@@ -18,6 +18,7 @@ import PurchasesList from "./pages/Purchases/PurchasesList.jsx";
 import SalesList from "./pages/Sales/SalesList.jsx";
 import Categories from "./pages/Categories/Categories.jsx";
 import ReportsPage from "./pages/Reports/ReportsPage.jsx";
+import CustomersList from "./pages/Customers/CustomersList.jsx";
 
 import "./index.css";
 
@@ -55,6 +56,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           </Route>
           <Route element={<RoleRoute roles={PERMISOS["/sales"]} />}>
             <Route path="/sales" element={<SalesList />} />
+          </Route>
+          <Route element={<RoleRoute roles={PERMISOS["/customers"]} />}>
+          <Route path="/customers" element={<CustomersList />} />
           </Route>
           <Route element={<RoleRoute roles={PERMISOS["/categories"]} />}>
             <Route path="/categories" element={<Categories />} />
