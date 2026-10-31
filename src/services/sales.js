@@ -50,6 +50,8 @@ export async function createInvoice(data) {
       body: JSON.stringify({
         items: data.items,
         customer_id: data.customer_id ? Number(data.customer_id) : null,
+        payment_method: data.payment_method || null,
+
       }),
     })
   );

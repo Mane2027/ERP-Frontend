@@ -2,12 +2,20 @@ import { useEffect, useState } from "react";
 import { getProducts } from "../../services/products";
 import { getCustomers } from "../../services/customers";
 
+const METODOS = [
+  { value: "efectivo", label: "Efectivo" },
+  { value: "transferencia", label: "Transferencia" },
+  { value: "nequi", label: "Nequi" },
+  { value: "daviplata", label: "Daviplata" },
+];
+
 const filaVacia = () => ({ product_id: "", quantity: "1" });
 
 export default function SaleForm({ onSubmit, saving = false }) {
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [customerId, setCustomerId] = useState(""); // "" = consumidor final
+  const [metodo, setMetodo] = useState("");
   const [rows, setRows] = useState([filaVacia()]);
   const [error, setError] = useState("");
 
@@ -57,9 +65,12 @@ export default function SaleForm({ onSubmit, saving = false }) {
         return setError(`Stock insuficiente de "${p.name}" (disponible: ${p.stock})`);
     }
 
+    if (!metodo) return setError("Selecciona el método de pago");
+
     setError("");
     onSubmit({
       customer_id: customerId,
+      payment_method: metodo,
       items: Object.entries(porProducto).map(([pid, q]) => ({
         product_id: Number(pid),
         quantity: q,
@@ -144,6 +155,24 @@ export default function SaleForm({ onSubmit, saving = false }) {
         >
           + Agregar producto
         </button>
+      </div>
+
+      <div className="flex flex-col gap-1 text-sm">
+        <span>Método de pago *</span>
+        <div className="flex flex-wrap gap-3">
+          {METODOS.map((m) => (
+            <label key={m.value} className="flex items-center gap-1">
+              <input
+                type="radio"
+                name="metodo"
+                value={m.value}
+                checked={metodo === m.value}
+                onChange={() => setMetodo(m.value)}
+              />
+              {m.label}
+            </label>
+          ))}
+        </div>
       </div>
 
       <p className="text-sm text-slate-600">

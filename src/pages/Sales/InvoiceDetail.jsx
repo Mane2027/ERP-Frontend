@@ -4,6 +4,13 @@ import { getInvoice } from "../../services/sales";
 // Pon aquí tu número de WhatsApp; si lo dejas vacío, sale la línea para escribirlo a mano
 const WHATSAPP = "";
 
+const METODOS_PAGO = [
+  { value: "efectivo", label: "Efectivo" },
+  { value: "transferencia", label: "Transferencia" },
+  { value: "nequi", label: "Nequi" },
+  { value: "daviplata", label: "Daviplata" },
+];
+
 const money = (n) => `$${Number(n || 0).toFixed(2)}`;
 const iso = (s) => (s ? new Date(s + (s.endsWith("Z") ? "" : "Z")) : null);
 const fechaHora = (s) => (iso(s) ? iso(s).toLocaleString() : "");
@@ -27,12 +34,14 @@ export default function InvoiceDetail({ id }) {
 
   const conIva = Number(f.impuestos) > 0;
   const c = f.cliente;
+  const metodoLabel = METODOS_PAGO.find((m) => m.value === f.metodo_pago)?.label;
 
   // Abre una ventana solo con el comprobante para imprimirlo o guardarlo como PDF
   const imprimir = () => {
     const filas = f.detalles
       .map(
         (d) => `<tr>
+          <td>${esc(d.sku || "—")}</td>
           <td>${esc(d.producto)}</td>
           <td class="r">${d.cantidad}</td>
           <td class="r">${money(d.precio_unitario)}</td>
@@ -69,7 +78,7 @@ export default function InvoiceDetail({ id }) {
          Teléfono: ${esc(c?.telefono || "")}</p>
 
       <table>
-        <thead><tr><th>Producto</th><th class="r">Cantidad</th><th class="r">Valor Unitario</th><th class="r">Total</th></tr></thead>
+        <thead><tr><th>SKU</th><th>Producto</th><th class="r">Cantidad</th><th class="r">Valor Unitario</th><th class="r">Total</th></tr></thead>
         <tbody>${filas}</tbody>
       </table>
 
@@ -81,7 +90,7 @@ export default function InvoiceDetail({ id }) {
       </div>
 
       <p style="margin-top:20px"><strong>Método de Pago:</strong><br>
-        ☐ Efectivo &nbsp; ☐ Transferencia &nbsp; ☐ Nequi &nbsp; ☐ Daviplata</p>
+        ${METODOS_PAGO.map((m) => `${f.metodo_pago === m.value ? "☑" : "☐"} ${m.label}`).join(" &nbsp; ")}</p>
 
       <div class="pie">
         <p>¡Gracias por confiar en Divina Essence! 🌸</p>
@@ -115,9 +124,14 @@ export default function InvoiceDetail({ id }) {
         {c?.telefono && <p className="text-slate-500">Teléfono: {c.telefono}</p>}
       </div>
 
+      {metodoLabel && (
+        <p className="text-slate-500">Método de pago: {metodoLabel}</p>
+      )}
+
       <table className="w-full">
         <thead>
           <tr className="text-left text-violet-700">
+            <th className="py-1">SKU</th>
             <th className="py-1">Producto</th>
             <th className="py-1 text-right">Cant.</th>
             <th className="py-1 text-right">Valor unitario</th>
@@ -127,6 +141,7 @@ export default function InvoiceDetail({ id }) {
         <tbody>
           {f.detalles.map((d, i) => (
             <tr key={i} className="border-t border-slate-100">
+              <td className="py-1 text-slate-500">{d.sku || "—"}</td>
               <td className="py-1">{d.producto}</td>
               <td className="py-1 text-right">{d.cantidad}</td>
               <td className="py-1 text-right">{money(d.precio_unitario)}</td>
