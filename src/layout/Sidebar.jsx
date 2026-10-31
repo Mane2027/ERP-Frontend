@@ -1,8 +1,4 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import {
-  Home, Package, Tags, ArrowDownToLine,
-  ArrowUpFromLine, Truck, Users, BarChart3, LogOut,
-} from "lucide-react";
 import logo from "../assets/logo.png";
 import { logout, getUser } from "../services/auth";
 import { puedeVer } from "../config/permisos";
