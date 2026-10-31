@@ -95,7 +95,7 @@ export default function InvoiceDetail({ id }) {
       <div class="pie">
         <p>¡Gracias por confiar en Divina Essence! 🌸</p>
         <p>Productos de cuidado personal para resaltar tu belleza natural.</p>
-        <p>Instagram: @divinaessence<br>WhatsApp: ${WHATSAPP ? esc(WHATSAPP) : "__________________"}</p>
+        <p>Instagram: @divinaessencetienda<br>WhatsApp: ${WHATSAPP ? esc(WHATSAPP) : "__________________"}</p>
       </div>
       </body></html>`);
     w.document.close();

@@ -14,6 +14,14 @@ const REPORTES = [
     filtros: ["fechas"],
   },
   {
+    id: "metodo-pago",
+    titulo: "Ventas por método de pago",
+    descripcion: "Ventas y total por Efectivo, Transferencia, Nequi y Daviplata.",
+    ruta: "/reportes/ventas/metodo-pago",
+    nombre: "ventas_metodo_pago",
+    filtros: ["fechas"],
+  },
+  {
     id: "compras",
     titulo: "Compras por proveedor",
     descripcion: "Compras agrupadas por proveedor, con subtotales.",
