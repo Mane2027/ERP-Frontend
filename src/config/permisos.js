@@ -3,6 +3,7 @@ export const PERMISOS = {
   "/categories": ["admin", "inventario"],
   "/purchases": ["admin", "inventario"],
   "/sales": ["admin", "vendedor", "inventario"],
+  "/customers": ["admin", "vendedor"],
   "/providers": ["admin", "inventario"],
   "/inventory": ["admin", "inventario"],
   "/reports": ["admin", "inventario"],
