@@ -6,6 +6,10 @@ import {
 import logo from "../assets/logo.png";
 import { logout, getUser } from "../services/auth";
 import { puedeVer } from "../config/permisos";
+import {
+  Home, Package, Tags, ArrowDownToLine,
+  ArrowUpFromLine, Truck, Users, BarChart3, LogOut, Contact,
+} from "lucide-react";
 
 const links = [
   { to: "/dashboard", label: "Inicio", icon: Home },
@@ -13,6 +17,7 @@ const links = [
   { to: "/categories", label: "Categorías", icon: Tags },
   { to: "/purchases", label: "Entradas", icon: ArrowDownToLine },
   { to: "/sales", label: "Salidas", icon: ArrowUpFromLine },
+  { to: "/customers", label: "Clientes", icon: Contact },
   { to: "/providers", label: "Proveedores", icon: Truck },
   { to: "/users", label: "Usuarios", icon: Users },
   { to: "/reports", label: "Reportes", icon: BarChart3 },
