@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Modal from "../../components/Modal";
 import SaleForm from "./SaleForm";
-import { getSales, createSale } from "../../services/sales";
+import { getSales, createInvoice, anularFactura } from "../../services/sales";
 import { getUser } from "../../services/auth";
 
 const formatearFecha = (iso) =>
@@ -11,10 +11,13 @@ export default function SalesList() {
   const [sales, setSales] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState("");
+  const [ok, setOk] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  // Inventario solo consulta las ventas; registrar es de admin y vendedor
+  // Inventario solo consulta; facturar es de admin y vendedor; anular, solo admin
   const user = getUser();
   const puedeVender = ["admin", "vendedor"].includes(user?.role);
+  const esAdmin = user?.role === "admin";
 
   const loadSales = async () => {
     try {
@@ -29,20 +32,32 @@ export default function SalesList() {
     loadSales();
   }, []);
 
-  // La API espera { items: [{ product_id, quantity }] }.
+  // La API espera { items: [{ product_id, quantity }], customer_id? }.
   // El precio lo toma el servidor de la base de datos, no se envía.
   const handleCreate = async (form) => {
+    if (saving) return;
+    try {
+      setSaving(true);
+      setError("");
+      setOk("");
+      const res = await createInvoice(form);
+      setModalOpen(false);
+      setOk(`Factura ${res.numero} emitida correctamente`);
+      loadSales();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAnular = async (s) => {
+    if (!confirm(`¿Anular la factura ${s.invoice_number}? Se devolverá el stock.`)) return;
     try {
       setError("");
-      await createSale({
-        items: [
-          {
-            product_id: Number(form.product_id),
-            quantity: Number(form.quantity),
-          },
-        ],
-      });
-      setModalOpen(false);
+      setOk("");
+      await anularFactura(s.id);
+      setOk(`Factura ${s.invoice_number} anulada y stock devuelto`);
       loadSales();
     } catch (err) {
       setError(err.message);
@@ -58,8 +73,12 @@ export default function SalesList() {
           onClick={() => setModalOpen(true)}
           className="bg-rosa p-2 rounded mb-4"
         >
-          + Registrar Venta
+          + Nueva factura
         </button>
+      )}
+
+      {ok && (
+        <p className="text-sm text-green-700 bg-green-50 rounded-xl p-3 mb-4">{ok}</p>
       )}
 
       {error && (
@@ -68,41 +87,76 @@ export default function SalesList() {
         </p>
       )}
 
-      <table className="w-full bg-white rounded shadow">
-        <thead>
-          <tr className="bg-morado text-white">
-            <th className="p-2">Fecha</th>
-            <th className="p-2">Producto</th>
-            <th className="p-2">Cantidad</th>
-            <th className="p-2">Precio</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {sales.length === 0 && (
-            <tr>
-              <td colSpan={4} className="p-6 text-center text-slate-400">
-                No hay ventas todavía
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full bg-white rounded shadow">
+          <thead>
+            <tr className="bg-morado text-white">
+              <th className="p-2">Factura</th>
+              <th className="p-2">Fecha</th>
+              <th className="p-2">Productos</th>
+              <th className="p-2">Total</th>
+              <th className="p-2">Estado</th>
+              {esAdmin && <th className="p-2">Acciones</th>}
             </tr>
-          )}
+          </thead>
 
-          {sales.map((s) =>
-            (s.items || []).map((item, i) => (
-              <tr key={`${s.id}-${i}`} className="border-b">
-                <td className="p-2">{formatearFecha(s.date)}</td>
-                <td className="p-2">{item.product}</td>
-                <td className="p-2">{item.quantity}</td>
-                <td className="p-2">${Number(item.price).toFixed(2)}</td>
+          <tbody>
+            {sales.length === 0 && (
+              <tr>
+                <td colSpan={esAdmin ? 6 : 5} className="p-6 text-center text-slate-400">
+                  No hay ventas todavía
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            )}
+
+            {sales.map((s) => {
+              const anulada = s.status === "anulada";
+              return (
+                <tr key={s.id} className={`border-b ${anulada ? "text-slate-400" : ""}`}>
+                  <td className="p-2">{s.invoice_number ?? "—"}</td>
+                  <td className="p-2">{formatearFecha(s.date)}</td>
+                  <td className="p-2">
+                    {(s.items || []).map((item, i) => (
+                      <div key={i}>
+                        {item.product} × {item.quantity}
+                      </div>
+                    ))}
+                  </td>
+                  <td className={`p-2 ${anulada ? "line-through" : ""}`}>
+                    ${Number(s.total).toFixed(2)}
+                  </td>
+                  <td className="p-2">
+                    <span
+                      className={`px-2 py-1 rounded-lg text-xs ${
+                        anulada ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {anulada ? "Anulada" : "Emitida"}
+                    </span>
+                  </td>
+                  {esAdmin && (
+                    <td className="p-2">
+                      {/* Las ventas simples (sin número de factura) no se pueden anular */}
+                      {!anulada && s.invoice_number != null && (
+                        <button
+                          onClick={() => handleAnular(s)}
+                          className="bg-pink-100 text-pink-700 px-3 py-1 rounded-lg"
+                        >
+                          Anular
+                        </button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {modalOpen && puedeVender && (
         <Modal onClose={() => setModalOpen(false)}>
-          <SaleForm onSubmit={handleCreate} />
+          <SaleForm onSubmit={handleCreate} saving={saving} />
         </Modal>
       )}
     </div>
