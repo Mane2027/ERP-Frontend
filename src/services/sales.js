@@ -1,22 +1,56 @@
 ﻿import { apiFetch } from "./http";
 
+const JSON_HEADERS = { "Content-Type": "application/json" };
+
+async function leer(res) {
+  if (res.status === 204) return true;
+
+  const body = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    const detalle = Array.isArray(body?.detail)
+      ? body.detail.map((d) => `${d.loc?.slice(1).join(".")}: ${d.msg}`).join("\n")
+      : body?.detail;
+    throw new Error(detalle || `Error ${res.status}`);
+  }
+  return body;
+}
+
+// GET /ventas/  (admin, vendedor, inventario)
+// -> [{ id, date, total, user, invoice_number, status, items: [...] }]
 export async function getSales() {
-  const res = await apiFetch(`/ventas`);
-  return res.json();
+  return leer(await apiFetch("/ventas/"));
 }
 
+// POST /ventas/  (admin, vendedor): venta simple, sin número de factura
+// Cuerpo: { items: [{ product_id, quantity }] }
 export async function createSale(data) {
-  const res = await apiFetch(`/ventas`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  return res.json();
+  return leer(
+    await apiFetch("/ventas/", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(data),
+    })
+  );
 }
 
-export async function deleteSale(id) {
-  const res = await apiFetch(`/ventas/${id}`, {
-    method: "DELETE",
-  });
-  return res.json();
+// POST /facturas/  (admin, vendedor)
+// Cuerpo: { items: [{ product_id, quantity }], customer_id? }
+// Sin customer_id = consumidor final
+export async function createInvoice(data) {
+  return leer(
+    await apiFetch("/facturas/", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        items: data.items,
+        customer_id: data.customer_id ? Number(data.customer_id) : null,
+      }),
+    })
+  );
+}
+
+// POST /facturas/{id}/anular  (solo admin): devuelve el stock
+export async function anularFactura(id) {
+  return leer(await apiFetch(`/facturas/${id}/anular`, { method: "POST" }));
 }
