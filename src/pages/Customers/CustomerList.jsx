@@ -7,6 +7,7 @@ import {
   updateCustomer,
   deleteCustomer,
 } from "../../services/customers";
+import { getUser } from "../../services/auth";
 
 export default function CustomersList() {
   const [customers, setCustomers] = useState([]);
@@ -15,6 +16,7 @@ export default function CustomersList() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const esAdmin = getUser()?.role === "admin";
 
   const loadCustomers = async (q = search) => {
     try {
@@ -148,12 +150,14 @@ export default function CustomersList() {
                       Editar
                     </button>
 
-                    <button
-                      onClick={() => handleDelete(c.id)}
-                      className="bg-pink-100 text-pink-700 px-3 py-1 rounded-lg"
-                    >
-                      Eliminar
-                    </button>
+                    {esAdmin && (
+     <button
+    onClick={() => handleDelete(c.id)}
+    className="bg-pink-100 text-pink-700 px-3 py-1 rounded-lg"
+  >
+    Eliminar
+  </button>
+)}
                   </div>
                 </td>
               </tr>
