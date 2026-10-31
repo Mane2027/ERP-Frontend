@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import { getInvoice } from "../../services/sales";
 
+// Pon aquí tu número de WhatsApp; si lo dejas vacío, sale la línea para escribirlo a mano
+const WHATSAPP = "";
+
 const money = (n) => `$${Number(n || 0).toFixed(2)}`;
-const fecha = (iso) =>
-  iso ? new Date(iso + (iso.endsWith("Z") ? "" : "Z")).toLocaleString() : "";
+const iso = (s) => (s ? new Date(s + (s.endsWith("Z") ? "" : "Z")) : null);
+const fechaHora = (s) => (iso(s) ? iso(s).toLocaleString() : "");
+const fechaCorta = (s) => (iso(s) ? iso(s).toLocaleDateString("es-CO") : "");
+const numero = (n) => String(n ?? "").padStart(4, "0");
 const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
@@ -23,44 +28,65 @@ export default function InvoiceDetail({ id }) {
   const conIva = Number(f.impuestos) > 0;
   const c = f.cliente;
 
-  // Abre una ventana solo con la factura para imprimirla (o guardarla como PDF)
+  // Abre una ventana solo con el comprobante para imprimirlo o guardarlo como PDF
   const imprimir = () => {
     const filas = f.detalles
       .map(
         (d) => `<tr>
           <td>${esc(d.producto)}</td>
-          <td style="text-align:right">${d.cantidad}</td>
-          <td style="text-align:right">${money(d.precio_unitario)}</td>
-          ${conIva ? `<td style="text-align:right">${d.iva_porcentaje}%</td>` : ""}
-          <td style="text-align:right">${money(d.subtotal)}</td>
+          <td class="r">${d.cantidad}</td>
+          <td class="r">${money(d.precio_unitario)}</td>
+          <td class="r">${money(d.subtotal)}</td>
         </tr>`
       )
       .join("");
 
     const w = window.open("", "_blank");
     if (!w) return;
-    w.document.write(`<html><head><title>Factura ${esc(f.numero)}</title>
+    w.document.write(`<html><head><title>Factura ${numero(f.numero)}</title>
       <style>
-        body{font-family:Arial,sans-serif;padding:32px;color:#222}
-        table{width:100%;border-collapse:collapse;margin-top:16px}
+        body{font-family:Arial,sans-serif;padding:32px;color:#222;max-width:680px;margin:auto}
+        h1{text-align:center;margin:0;letter-spacing:2px}
+        h2{text-align:center;margin:4px 0 20px;font-weight:normal}
+        h3{margin:20px 0 6px}
+        table{width:100%;border-collapse:collapse;margin-top:8px}
         th,td{padding:6px 8px;border-bottom:1px solid #ddd;text-align:left}
         th{background:#f3f0ff}
-        .total{text-align:right;margin-top:12px}
+        .r{text-align:right}
+        .tot{margin-top:14px;text-align:right}
+        .tot p{margin:3px 0}
+        .pie{text-align:center;margin-top:28px;font-size:14px}
+        .anulada{text-align:center;color:#b91c1c;font-weight:bold;margin-bottom:8px}
       </style></head><body>
-      <h2>Divina Essence</h2>
-      <h3>Factura N.º ${esc(f.numero)}${f.estado === "anulada" ? " (ANULADA)" : ""}</h3>
-      <p>Fecha: ${esc(fecha(f.fecha))}<br>Atendió: ${esc(f.usuario)}</p>
-      <p><strong>Cliente:</strong> ${esc(c ? c.nombre : "Consumidor final")}
-        ${c?.documento ? `<br>Documento: ${esc(c.documento)}` : ""}
-        ${c?.telefono ? `<br>Teléfono: ${esc(c.telefono)}` : ""}
-        ${c?.direccion ? `<br>Dirección: ${esc(c.direccion)}` : ""}</p>
-      <table><thead><tr>
-        <th>Producto</th><th>Cant.</th><th>Precio</th>${conIva ? "<th>IVA</th>" : ""}<th>Subtotal</th>
-      </tr></thead><tbody>${filas}</tbody></table>
-      <div class="total">
+      <h1>DIVINA ESSENCE</h1>
+      <h2>Comprobante de Venta</h2>
+      ${f.estado === "anulada" ? `<p class="anulada">FACTURA ANULADA</p>` : ""}
+      <p><strong>Factura N.º:</strong> ${numero(f.numero)}<br>
+         <strong>Fecha:</strong> ${esc(fechaCorta(f.fecha))}</p>
+
+      <h3>Datos del Cliente</h3>
+      <p>Nombre: ${esc(c ? c.nombre : "Consumidor final")}<br>
+         Teléfono: ${esc(c?.telefono || "")}</p>
+
+      <table>
+        <thead><tr><th>Producto</th><th class="r">Cantidad</th><th class="r">Valor Unitario</th><th class="r">Total</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+
+      <div class="tot">
         <p>Subtotal: ${money(f.subtotal)}</p>
         ${conIva ? `<p>IVA: ${money(f.impuestos)}</p>` : ""}
-        <p><strong>Total: ${money(f.total)}</strong></p>
+        <p>Descuento: ${money(0)}</p>
+        <p><strong>Total a Pagar: ${money(f.total)}</strong></p>
+      </div>
+
+      <p style="margin-top:20px"><strong>Método de Pago:</strong><br>
+        ☐ Efectivo &nbsp; ☐ Transferencia &nbsp; ☐ Nequi &nbsp; ☐ Daviplata</p>
+
+      <div class="pie">
+        <p>¡Gracias por confiar en Divina Essence! 🌸</p>
+        <p>Productos de cuidado personal para resaltar tu belleza natural.</p>
+        <p>Instagram: @divinaessence<br>WhatsApp: ${WHATSAPP ? esc(WHATSAPP) : "__________________"}</p>
       </div>
       </body></html>`);
     w.document.close();
@@ -72,7 +98,7 @@ export default function InvoiceDetail({ id }) {
     <div className="flex flex-col gap-3 text-sm">
       <div>
         <h2 className="text-lg font-bold text-slate-800">
-          Factura N.º {f.numero}
+          Factura N.º {numero(f.numero)}
           {f.estado === "anulada" && (
             <span className="ml-2 px-2 py-1 rounded-lg text-xs bg-red-100 text-red-700">
               Anulada
@@ -80,15 +106,13 @@ export default function InvoiceDetail({ id }) {
           )}
         </h2>
         <p className="text-slate-500">
-          {fecha(f.fecha)} · Atendió: {f.usuario}
+          {fechaHora(f.fecha)} · Atendió: {f.usuario}
         </p>
       </div>
 
       <div className="bg-violet-50 rounded-xl p-3">
         <p className="font-medium text-slate-800">{c ? c.nombre : "Consumidor final"}</p>
-        {c?.documento && <p className="text-slate-500">Documento: {c.documento}</p>}
         {c?.telefono && <p className="text-slate-500">Teléfono: {c.telefono}</p>}
-        {c?.direccion && <p className="text-slate-500">Dirección: {c.direccion}</p>}
       </div>
 
       <table className="w-full">
@@ -96,9 +120,8 @@ export default function InvoiceDetail({ id }) {
           <tr className="text-left text-violet-700">
             <th className="py-1">Producto</th>
             <th className="py-1 text-right">Cant.</th>
-            <th className="py-1 text-right">Precio</th>
-            {conIva && <th className="py-1 text-right">IVA</th>}
-            <th className="py-1 text-right">Subtotal</th>
+            <th className="py-1 text-right">Valor unitario</th>
+            <th className="py-1 text-right">Total</th>
           </tr>
         </thead>
         <tbody>
@@ -107,7 +130,6 @@ export default function InvoiceDetail({ id }) {
               <td className="py-1">{d.producto}</td>
               <td className="py-1 text-right">{d.cantidad}</td>
               <td className="py-1 text-right">{money(d.precio_unitario)}</td>
-              {conIva && <td className="py-1 text-right">{d.iva_porcentaje}%</td>}
               <td className="py-1 text-right">{money(d.subtotal)}</td>
             </tr>
           ))}
@@ -117,7 +139,7 @@ export default function InvoiceDetail({ id }) {
       <div className="text-right">
         <p>Subtotal: {money(f.subtotal)}</p>
         {conIva && <p>IVA: {money(f.impuestos)}</p>}
-        <p className="font-bold text-slate-800">Total: {money(f.total)}</p>
+        <p className="font-bold text-slate-800">Total a pagar: {money(f.total)}</p>
       </div>
 
       <button onClick={imprimir} className="bg-morado text-white p-2 rounded">
