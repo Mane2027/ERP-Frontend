@@ -22,6 +22,11 @@ export async function getSales() {
   return leer(await apiFetch("/ventas/"));
 }
 
+// GET /facturas/{id}  (admin, vendedor, inventario)
+export async function getInvoice(id) {
+  return leer(await apiFetch(`/facturas/${id}`));
+}
+
 // POST /ventas/  (admin, vendedor): venta simple, sin número de factura
 // Cuerpo: { items: [{ product_id, quantity }] }
 export async function createSale(data) {
@@ -53,4 +58,6 @@ export async function createInvoice(data) {
 // POST /facturas/{id}/anular  (solo admin): devuelve el stock
 export async function anularFactura(id) {
   return leer(await apiFetch(`/facturas/${id}/anular`, { method: "POST" }));
+
 }
+  

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Modal from "../../components/Modal";
 import SaleForm from "./SaleForm";
+import InvoiceDetail from "./InvoiceDetail";
 import { getSales, createInvoice, anularFactura } from "../../services/sales";
 import { getUser } from "../../services/auth";
 
@@ -10,6 +11,7 @@ const formatearFecha = (iso) =>
 export default function SalesList() {
   const [sales, setSales] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [verId, setVerId] = useState(null);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
   const [saving, setSaving] = useState(false);
@@ -96,14 +98,14 @@ export default function SalesList() {
               <th className="p-2">Productos</th>
               <th className="p-2">Total</th>
               <th className="p-2">Estado</th>
-              {esAdmin && <th className="p-2">Acciones</th>}
+              <th className="p-2">Acciones</th>
             </tr>
           </thead>
 
           <tbody>
             {sales.length === 0 && (
               <tr>
-                <td colSpan={esAdmin ? 6 : 5} className="p-6 text-center text-slate-400">
+                <td colSpan={6} className="p-6 text-center text-slate-400">
                   No hay ventas todavía
                 </td>
               </tr>
@@ -134,10 +136,18 @@ export default function SalesList() {
                       {anulada ? "Anulada" : "Emitida"}
                     </span>
                   </td>
-                  {esAdmin && (
-                    <td className="p-2">
-                      {/* Las ventas simples (sin número de factura) no se pueden anular */}
-                      {!anulada && s.invoice_number != null && (
+                  <td className="p-2">
+                    {/* Las ventas simples (sin número de factura) no tienen detalle de factura */}
+                    <div className="flex gap-2">
+                      {s.invoice_number != null && (
+                        <button
+                          onClick={() => setVerId(s.id)}
+                          className="bg-violet-100 text-violet-700 px-3 py-1 rounded-lg"
+                        >
+                          Ver
+                        </button>
+                      )}
+                      {esAdmin && !anulada && s.invoice_number != null && (
                         <button
                           onClick={() => handleAnular(s)}
                           className="bg-pink-100 text-pink-700 px-3 py-1 rounded-lg"
@@ -145,8 +155,8 @@ export default function SalesList() {
                           Anular
                         </button>
                       )}
-                    </td>
-                  )}
+                    </div>
+                  </td>
                 </tr>
               );
             })}
@@ -157,6 +167,12 @@ export default function SalesList() {
       {modalOpen && puedeVender && (
         <Modal onClose={() => setModalOpen(false)}>
           <SaleForm onSubmit={handleCreate} saving={saving} />
+        </Modal>
+      )}
+
+      {verId && (
+        <Modal onClose={() => setVerId(null)}>
+          <InvoiceDetail id={verId} />
         </Modal>
       )}
     </div>

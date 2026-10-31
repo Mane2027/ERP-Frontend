@@ -25,7 +25,7 @@ const PERIODOS = [
 const ACCIONES = [
   { label: "Nuevo producto", to: "/products" },
   { label: "Registrar entrada", to: "/purchases" },
-  { label: "Registrar salida", to: "/sales" },
+  { label: "Nueva factura", to: "/sales" },
   { label: "Ver reportes", to: "/reports" },
 ];
 
