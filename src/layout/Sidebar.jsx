@@ -26,7 +26,7 @@ const ROLES = {
   user: "Usuario",
 };
 
-export default function Sidebar() {
+export default function Sidebar({ abierto = false, onCerrar = () => {} }) {
   const navigate = useNavigate();
   const user = getUser();
 
@@ -40,10 +40,16 @@ export default function Sidebar() {
   const puedeIrAUsuarios = puedeVer(user?.role, "/users");
 
   return (
-    <aside className="fixed w-64 h-screen overflow-y-auto flex flex-col gap-6 p-4 text-purple-900 bg-linear-to-b from-rosado to-morado shadow-lg">
+    <aside
+      className={`fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto flex flex-col gap-6 p-4 text-purple-900 bg-linear-to-b from-rosado to-morado shadow-lg transition-transform duration-200 md:translate-x-0 ${
+        abierto ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
       <img
         src={logo}
         alt="Divina Essence"
+        width="96"
+        height="96"
         className="w-24 h-24 rounded-xl bg-white object-contain p-1 shadow-sm"
       />
 
@@ -52,6 +58,7 @@ export default function Sidebar() {
           <NavLink
             key={to}
             to={to}
+            onClick={onCerrar}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                 isActive
@@ -69,16 +76,24 @@ export default function Sidebar() {
       <div className="mt-auto flex flex-col gap-2">
         {user && (
           <button
-            onClick={() => puedeIrAUsuarios && navigate("/users")}
+            onClick={() => {
+              if (puedeIrAUsuarios) navigate("/users");
+              onCerrar();
+            }}
             className={`flex items-center gap-3 px-3 py-2 rounded-xl bg-white/50 text-left transition ${
               puedeIrAUsuarios ? "hover:bg-white/70" : "cursor-default"
             }`}
           >
-            <span className="w-9 h-9 shrink-0 rounded-full bg-linear-to-r from-pink-500 to-violet-500 text-white flex items-center justify-center font-semibold uppercase">
+            <span
+              translate="no"
+              className="w-9 h-9 shrink-0 rounded-full bg-linear-to-r from-pink-500 to-violet-500 text-white flex items-center justify-center font-semibold uppercase"
+            >
               {user.username.charAt(0)}
             </span>
             <span className="min-w-0">
-              <span className="block font-medium truncate">{user.username}</span>
+              <span translate="no" className="block font-medium truncate">
+                {user.username}
+              </span>
               <span className="block text-xs text-purple-700">
                 {ROLES[user.role] ?? user.role}
               </span>
